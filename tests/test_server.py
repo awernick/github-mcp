@@ -160,6 +160,20 @@ def test_get_pull_request_aggregates_files_and_checks(token, rx):
     assert result["checks"][0]["conclusion"] == "success"
 
 
+def test_get_pull_request_tolerates_missing_checks_permission(token, rx):
+    rx.get("/repos/a/b/pulls/9").mock(return_value=httpx.Response(200, json=PR))
+    rx.get("/repos/a/b/pulls/9/files").mock(return_value=httpx.Response(200, json=[]))
+    rx.get("/repos/a/b/commits/abc123/check-runs").mock(
+        return_value=httpx.Response(
+            403, json={"message": "Resource not accessible by personal access token"}
+        )
+    )
+    result = json.loads(server.get_pull_request("a/b", 9))
+    assert result["checks"] is None
+    assert "Checks: read" in result["checks_error"]
+    assert result["pull_request"]["number"] == 9
+
+
 def test_create_pull_request_resolves_default_branch(token, rx):
     rx.get("/repos/a/b").mock(
         return_value=httpx.Response(200, json={"default_branch": "main"})

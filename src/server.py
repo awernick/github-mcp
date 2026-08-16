@@ -334,11 +334,22 @@ def get_pull_request(repo: str, number: int) -> str:
     def run(gh: GitHubClient) -> dict:
         pr = gh.get(f"/repos/{repo}/pulls/{number}")
         files = gh.get(f"/repos/{repo}/pulls/{number}/files", params={"per_page": 100})
-        check_runs = gh.get(
-            f"/repos/{repo}/commits/{pr['head']['sha']}/check-runs",
-            params={"per_page": 100},
-        )
-        return {
+        # CI summary is optional: check-runs requires Checks: read on the
+        # token; a 403 means the grant is missing, not that the call failed.
+        checks_error = None
+        try:
+            check_runs = gh.get(
+                f"/repos/{repo}/commits/{pr['head']['sha']}/check-runs",
+                params={"per_page": 100},
+            ).get("check_runs", [])
+            checks: Any = [
+                {"name": c["name"], "status": c["status"], "conclusion": c.get("conclusion")}
+                for c in check_runs
+            ]
+        except ApiClientError:
+            checks = None
+            checks_error = "CI summary unavailable: grant Checks: read on the PAT"
+        result: dict[str, Any] = {
             "pull_request": {
                 **_trim_pull_request(pr),
                 "body": pr.get("body"),
@@ -356,15 +367,11 @@ def get_pull_request(repo: str, number: int) -> str:
                 for f in files
             ],
             "files_truncated": pr.get("changed_files", 0) > 100,
-            "checks": [
-                {
-                    "name": c["name"],
-                    "status": c["status"],
-                    "conclusion": c.get("conclusion"),
-                }
-                for c in check_runs.get("check_runs", [])
-            ],
+            "checks": checks,
         }
+        if checks_error:
+            result["checks_error"] = checks_error
+        return result
 
     return _call(run)
 
