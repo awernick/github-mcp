@@ -209,6 +209,48 @@ def test_search_code_adds_repo_qualifier(token, rx):
     assert result["items"][0]["path"] == "src/server.py"
 
 
+REPO_ITEM = {
+    "full_name": "a/cool-lib",
+    "description": "A cool library",
+    "stargazers_count": 12345,
+    "forks_count": 678,
+    "open_issues_count": 12,
+    "language": "Python",
+    "topics": ["mcp", "llm"],
+    "license": {"spdx_id": "MIT"},
+    "default_branch": "main",
+    "archived": False,
+    "pushed_at": "2026-08-01T00:00:00Z",
+    "created_at": "2025-01-01T00:00:00Z",
+    "homepage": "https://cool.dev",
+    "html_url": "https://github.com/a/cool-lib",
+}
+
+
+def test_search_repositories_sorts_by_stars_and_builds_qualifiers(token, rx):
+    route = rx.get("/search/repositories").mock(
+        return_value=httpx.Response(200, json={"total_count": 1, "items": [REPO_ITEM]})
+    )
+    result = json.loads(
+        server.search_repositories("mcp server", language="python", min_stars=100)
+    )
+    params = route.calls.last.request.url.params
+    assert params["q"] == "mcp server language:python stars:>=100"
+    assert params["sort"] == "stars"
+    assert params["order"] == "desc"
+    assert result["items"][0]["full_name"] == "a/cool-lib"
+    assert result["items"][0]["stars"] == 12345
+    assert result["items"][0]["license"] == "MIT"
+
+
+def test_get_repo_returns_summary_card(token, rx):
+    rx.get("/repos/a/cool-lib").mock(return_value=httpx.Response(200, json=REPO_ITEM))
+    result = json.loads(server.get_repo("a/cool-lib"))
+    assert result["full_name"] == "a/cool-lib"
+    assert result["topics"] == ["mcp", "llm"]
+    assert result["homepage"] == "https://cool.dev"
+
+
 def test_api_failure_returns_error_json(token, rx):
     rx.get("/repos/a/b/issues").mock(return_value=httpx.Response(500, text="boom"))
     result = json.loads(server.list_issues("a/b"))

@@ -423,6 +423,89 @@ def add_pr_comment(repo: str, number: int, body: str) -> str:
 
 
 # --------------------------------------------------------------------------
+# Repository discovery
+
+
+def _trim_repo(repo: dict) -> dict:
+    return {
+        "full_name": repo["full_name"],
+        "description": repo.get("description"),
+        "stars": repo.get("stargazers_count", 0),
+        "forks": repo.get("forks_count", 0),
+        "open_issues": repo.get("open_issues_count", 0),
+        "language": repo.get("language"),
+        "topics": repo.get("topics", []),
+        "license": (repo.get("license") or {}).get("spdx_id"),
+        "default_branch": repo.get("default_branch"),
+        "archived": repo.get("archived", False),
+        "pushed_at": repo.get("pushed_at"),
+        "created_at": repo.get("created_at"),
+        "html_url": repo["html_url"],
+    }
+
+
+@mcp.tool
+def search_repositories(
+    query: str,
+    language: str | None = None,
+    min_stars: int | None = None,
+    page: int = 1,
+    per_page: int = 20,
+) -> str:
+    """Search repositories, sorted by popularity (stars) descending.
+
+    Use this to explore existing repos and projects, e.g. find the most
+    starred implementations of a tool or library.
+
+    Args:
+        query: Repository search text, e.g. "mcp server" or "typo checker".
+        language: Optional language filter, e.g. "python", "typescript".
+        min_stars: Only include repos with at least this many stars.
+        page: Page number (default 1).
+        per_page: Results per page, max 100 (default 20).
+    """
+    def run(gh: GitHubClient) -> dict:
+        parts = [query]
+        if language:
+            parts.append(f"language:{language}")
+        if min_stars is not None and min_stars > 0:
+            parts.append(f"stars:>={min_stars}")
+        result = gh.get(
+            "/search/repositories",
+            params={
+                "q": " ".join(parts),
+                "sort": "stars",
+                "order": "desc",
+                "page": page,
+                "per_page": min(per_page, 100),
+            },
+        )
+        return {
+            "total_count": result["total_count"],
+            "items": [_trim_repo(i) for i in result["items"]],
+        }
+
+    return _call(run)
+
+
+@mcp.tool
+def get_repo(repo: str) -> str:
+    """Get a repository's summary card (stars, forks, language, topics).
+    Use with search_repositories to evaluate repos found by popularity.
+
+    Args:
+        repo: Repository as "owner/repo".
+    """
+    def run(gh: GitHubClient) -> dict:
+        repo_data = gh.get(f"/repos/{repo}")
+        trimmed = _trim_repo(repo_data)
+        trimmed["homepage"] = repo_data.get("homepage")
+        return trimmed
+
+    return _call(run)
+
+
+# --------------------------------------------------------------------------
 # Code browsing
 
 

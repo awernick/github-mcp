@@ -7,7 +7,7 @@ trimmed JSON-string responses, and failures isolated as `{"error": ...}`.
 
 Why not the official `github/github-mcp-server`? Its default toolset alone
 registers 46 tools (~10-15k tokens of schema) with rich nested arguments,
-and self-hosted it is stdio-only. This server keeps ~13 flat tools (~2-3k
+and self-hosted it is stdio-only. This server keeps 15 flat tools (~2-3k
 tokens) and speaks streamable HTTP natively, which Open WebUI consumes
 directly. OpenCode terminal sessions continue to use the `gh` CLI.
 
@@ -16,6 +16,8 @@ directly. OpenCode terminal sessions continue to use the `gh` CLI.
 | Tool | Args | Notes |
 |------|------|-------|
 | `get_me` | | Authenticated user |
+| `search_repositories` | query, language, min_stars, page, per_page | Sorted by stars desc; repo exploration by popularity |
+| `get_repo` | repo | Summary card: stars, forks, language, topics, license |
 | `list_issues` | repo, state, labels, page, per_page | PRs filtered out; labels comma-separated |
 | `search_issues` | query, repo, per_page | GitHub search syntax; repo adds `repo:` qualifier |
 | `get_issue` | repo, number, include_comments | Body + up to 50 comments |
