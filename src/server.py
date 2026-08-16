@@ -8,8 +8,8 @@ browsing); the official github-mcp-server covers the rest at a much larger
 schema cost.
 
 Auth: a single fine-grained PAT from GITHUB_PERSONAL_ACCESS_TOKEN (Issues
-r/w, Pull requests r/w, Contents r, Metadata r; CI check-run status needs
-no dedicated permission). Transport is
+r/w, Pull requests r/w, Contents r, Checks r for the CI summary, Metadata
+r). Transport is
 stdio by default; set MCP_TRANSPORT=http for streamable-http (Docker),
 with MCP_HOST/MCP_PORT overrides. A local .env file is loaded if present.
 Every tool returns a JSON string and isolates failures as {"error": ...}.

@@ -37,8 +37,9 @@ directly. OpenCode terminal sessions continue to use the `gh` CLI.
 
 One fine-grained PAT in the environment (`GITHUB_PERSONAL_ACCESS_TOKEN`):
 Issues r/w, Pull requests r/w, Contents r (also covers releases),
-Metadata r (auto-granted; covers the check-run CI summary). Actions r is
-not needed today, only if workflow-run tools are added later. A local
+Checks r (CI summary in `get_pull_request`; without it the summary
+degrades to a `checks_error` hint), Metadata r (auto-granted). Actions r
+is not needed today, only if workflow-run tools are added later. A local
 `.env` file is loaded if present.
 
 ## Run
