@@ -24,12 +24,22 @@ from typing import Any
 
 from dotenv import load_dotenv
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from gh_client import ApiClientError, GitHubClient
+from mcp_observability import MetricsMiddleware
+from mcp_observability.metrics import metrics_content_type, metrics_output
 
 load_dotenv()
 
 mcp = FastMCP("GitHub")
+mcp.add_middleware(MetricsMiddleware())
+
+
+@mcp.custom_route("/metrics", methods=["GET"])
+async def prometheus_metrics(request: Request) -> PlainTextResponse:
+    return PlainTextResponse(metrics_output(), media_type=metrics_content_type())
 
 MAX_FILE_CHARS = 100_000
 
